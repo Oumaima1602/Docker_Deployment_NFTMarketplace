@@ -1,0 +1,143 @@
+version: "3.7"
+services:
+  service-registry:
+    image: "sf_service-registry-microservice"
+    container_name: registry
+    ports:
+      - 8761:8761
+    depends_on:
+      - mongodb
+    networks:
+      - network-eureka
+  cloud-gatway:
+    image: "sf_cloud-microservice"
+    ports:
+      - 9191:9191
+    depends_on:
+      - nfts-microservice
+      - ServiceRegistry-Microservice
+
+
+    networks:
+      - network-eureka   
+    environment:
+      eureka.instance.hostname: service-registry
+      eureka.client.serviceUrl.defaultZone: http://service-registry:8761/eureka/   
+      SPRING_CLOUD_GATEWAY_ROUTES[0]_PREDICATES[0]: Path= /api/auth/**  
+      SPRING_CLOUD_GATEWAY_ROUTES[1]_URI: http://gest-contracts-finale:8070
+      SPRING_CLOUD_GATEWAY_ROUTES[1]_ID: CONTRACTS-SERVICE
+      SPRING_CLOUD_GATEWAY_ROUTES[1]_PREDICATES[0]: Path= /api/contrats/**   
+      SPRING_CLOUD_GATEWAY_ROUTES[2]_URI: http://gest-user:9080
+      SPRING_CLOUD_GATEWAY_ROUTES[2]_ID: USER-SERVICE
+      SPRING_CLOUD_GATEWAY_ROUTES[2]_PREDICATES[0]: Path=/api/users/**   
+      SPRING_CLOUD_GATEWAY_ROUTES[3]_URI: http://gest-proprety:8062   
+      SPRING_CLOUD_GATEWAY_ROUTES[3]_ID: PROPRETY-SERVICE
+      SPRING_CLOUD_GATEWAY_ROUTES[3]_PREDICATES[0]: Path=/api/propreties/**      
+      SPRING_CLOUD_GATEWAY_ROUTES[4]_URI: http://gest-ownership:9092 
+      SPRING_CLOUD_GATEWAY_ROUTES[4]_ID: OWNERSHIP-SERVICE
+      SPRING_CLOUD_GATEWAY_ROUTES[4]_PREDICATES[0]: Path=/api/contrat/**      
+      SPRING_CLOUD_GATEWAY_ROUTES[5]_URI: http://gest-complaints:8088     
+      SPRING_CLOUD_GATEWAY_ROUTES[5]_ID: COMPLAINTS-SERVICE
+      SPRING_CLOUD_GATEWAY_ROUTES[5]_PREDICATES[0]: Path=/api/reclamation/**                     
+               
+  token-test:
+    image: "moberbar/token-test-img"
+    ports:
+      - 8082:8082
+    depends_on:
+      - service-registry
+    networks:
+      - network-eureka  
+    environment:  
+      spring.data.mongodb.host : mongo
+      eureka.instance.hostname: service-registry
+      eureka.client.serviceUrl.defaultZone: http://service-registry:8761/eureka/ 
+  gest-contracts-finale:
+    image: "moberbar/gest-contracts-finale-img"
+    ports:
+      - 8070:8070
+    depends_on:
+      - service-registry
+    networks:
+      - network-eureka  
+    environment:  
+      spring.data.mongodb.host : mongo
+      eureka.instance.hostname: service-registry
+      eureka.client.serviceUrl.defaultZone: http://service-registry:8761/eureka/ 
+  gest-user:
+    image: "moberbar/gest-user-img"
+    ports:
+      - 9080:9080
+    depends_on:
+      - service-registry
+    networks:
+      - network-eureka  
+    environment:  
+      spring.data.mongodb.host : mongo
+      eureka.instance.hostname: service-registry
+      eureka.client.serviceUrl.defaultZone: http://service-registry:8761/eureka/                       
+  gest-proprety:
+    image: "moberbar/gest-proprety-img"
+    ports:
+      - 8062:8062
+    depends_on:
+      - service-registry
+    networks:
+      - network-eureka  
+    environment:  
+      spring.data.mongodb.host : mongo
+      eureka.instance.hostname: service-registry
+      eureka.client.serviceUrl.defaultZone: http://service-registry:8761/eureka/   
+  gest-ownership:
+    image: "moberbar/gest-ownership-img"
+    ports:
+      - 9092:9092
+    depends_on:
+      - service-registry
+    networks:
+      - network-eureka  
+    environment:  
+      spring.data.mongodb.host : mongo
+      eureka.instance.hostname: service-registry
+      eureka.client.serviceUrl.defaultZone: http://service-registry:8761/eureka/   
+  gest-complaints:
+    image: "moberbar/gest-complaints-img"
+    ports:
+      - 8088:8088
+    depends_on:
+      - service-registry
+    networks:
+      - network-eureka  
+    environment:  
+      spring.data.mongodb.host : mongo
+      eureka.instance.hostname: service-registry
+      eureka.client.serviceUrl.defaultZone: http://service-registry:8761/eureka/                        
+  frontend:
+    image: "moberbar/frontend-angular-img"
+    ports:
+      - 4200:80
+    depends_on:
+      - cloud-gatway
+    networks:
+      - network-eureka     
+  mongodb:
+    image: mongo:latest    
+    container_name: mongo
+    ports:
+      - 27017:27017
+    networks:
+      - network-eureka    
+  mongoSeed:
+    image: mongo:latest
+    networks:
+      - network-eureka    
+    links:
+      - mongodb
+    volumes:
+      - ./mongo-seed:/mongo-seed
+    command:
+      /mongo-seed/import.sh     
+         
+      
+networks:
+ network-eureka: 
